@@ -15,7 +15,7 @@ const WeatherTextConditions = () => {
       <CarouselContent>
         {conditionComponents.map((ConditionComponent, index) => (
           <CarouselItem key={index}>
-            <div className="p-1">
+            <div className="p-1 w-full">
                 <ConditionComponent />
             </div>
           </CarouselItem>

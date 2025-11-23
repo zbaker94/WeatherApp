@@ -1,23 +1,24 @@
 import WeatherTextConditions from "@/components/WeatherText/WeatherTextConditions";
 import { createFileRoute } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center p-4">
-      <div className="flex flex-row text-4xl sm:text-6xl md:text-8xl font-bold leading-tight text-left">
+    <motion.div className="min-h-screen flex flex-col items-center justify-center text-center p-4">
+      <motion.div className="flex flex-row text-1xl sm:text-3xl md:text-5xl font-bold leading-tight mr-90">
         IT IS
-      </div>
+      </motion.div>
       <WeatherTextConditions />
-      <div className="text-4xl sm:text-6xl md:text-8xl font-bold leading-tight">
+      <motion.div className="text-1xl sm:text-3xl md:text-5xl font-bold leading-tight mr-50">
         IN
-      </div>
-      <div className="text-5xl sm:text-7xl md:text-9xl font-bold leading-tight relative flex items-center justify-center">
+      </motion.div>
+      <motion.div className="text-4xl sm:text-6xl md:text-8xl font-bold leading-tight relative flex items-center justify-center mr-40">
         BEVERLY HILLS
-        <MapPin className="ml-10 cursor-pointer" size={64} />
-      </div>
-    </div>
+        <MapPin className="ml-10 cursor-pointer size-8 sm:size-12 md:size-16" />
+      </motion.div>
+    </motion.div>
   );
 }
