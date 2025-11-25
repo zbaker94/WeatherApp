@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { motion, AnimatePresence, delay } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import AdditionalTemperatureDetails from "./AdditionalTemperatureDetails";
 import { convertTemperatureToUnits, TemperatureUnits } from "./util";
+import { useWeather } from "../../lib/WeatherProvider";
+import { z } from "zod";
 
 
 
@@ -27,17 +29,30 @@ const itemVariants = {
 const TemperatureText = () => {
     const [units, setUnits] = useState<TemperatureUnits>(TemperatureUnits.FAHRENHEIT);
     const [open, setOpen] = useState(false);
+    const { weather, isLoading, error, isError } = useWeather();
     
-    const temperatureKelvin = 284.2; // TODO Data from API would be used here
-
     const handleUnitChange = useCallback((unit: TemperatureUnits) => {
         setUnits(unit);
         setOpen(false);
     }, []);
 
     const temperatureToDisplay = useMemo(() => {
-        return convertTemperatureToUnits(temperatureKelvin, units);
-    }, [units, temperatureKelvin, convertTemperatureToUnits]);
+        const temperatureKelvin = weather?.main?.temp;
+        const parsed = z.number().safeParse(temperatureKelvin);
+        if (!parsed.success) {
+            return 'N/A';
+        }
+        return convertTemperatureToUnits(parsed.data, units);
+    }, [units, weather?.main?.temp, convertTemperatureToUnits]);
+
+    if (isError) {
+        return <div className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight">unable to load the weather: {String(error)}</div>;
+    }
+    if (isLoading) {
+        return <div className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight">loading the weather</div>;
+    }
+
+
 
     return (
         <div className="flex flex-col">
