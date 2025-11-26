@@ -7,7 +7,9 @@ import { useLocation } from "@/lib/provider/LocationProvider";
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
-  const { location } = useLocation();
+  const { location, userAcceptedLocation, locationQueryIsSuccess } = useLocation();
+
+  const MotionMapPin = motion(MapPin);
 
   return (
     <motion.div className="min-h-screen flex flex-col items-center justify-center text-center p-4">
@@ -20,7 +22,11 @@ function App() {
       </motion.div>
       <motion.div className="text-4xl sm:text-6xl md:text-8xl font-bold leading-tight relative flex items-center justify-center mr-40">
         {location?.name.toUpperCase() || '???'}
-        <MapPin className="ml-10 cursor-pointer size-8 sm:size-12 md:size-16" />
+          <MotionMapPin
+            className="ml-10 size-8 sm:size-12 md:size-16"
+            animate={{ stroke: locationQueryIsSuccess ? '#d30f0fff' : '#000000' }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          />
       </motion.div>
     </motion.div>
   );

@@ -11,6 +11,7 @@ interface LocationContextType {
   locationQueryIsError: boolean
   locationQueryIsSuccess: boolean
   locationQueryIsPending: boolean
+  userAcceptedLocation: boolean | null
   error: Error | null
 }
 
@@ -20,6 +21,7 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
   const queryClient = useQueryClient()
 
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null | undefined>(undefined)
+  const [userAcceptedLocation, setUserAcceptedLocation] = useState<boolean| null>(null)
 
   const getLocationFn = useServerFn(WeatherAPI.getLocation)
   const getLocationFromCoordsFn = useServerFn(WeatherAPI.getLocationFromCoords)
@@ -40,15 +42,18 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+            setUserAcceptedLocation(true)
           setCoords({ lat: position.coords.latitude, lon: position.coords.longitude })
         },
         (error) => {
-          console.warn('Geolocation error:', error)
+            console.warn('Geolocation error:', error)
+            setUserAcceptedLocation(false)
           setCoords(null)
         },
         { timeout: 10000 }
       )
     } else {
+      setUserAcceptedLocation(null)
       setCoords(null)
     }
   }, [])
@@ -72,6 +77,7 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
         locationQueryIsError: locationQuery.isError,
         locationQueryIsSuccess: locationQuery.isSuccess,
         locationQueryIsPending: locationQuery.isPending,
+        userAcceptedLocation,
         error: locationQuery.error,
       }}
     >
