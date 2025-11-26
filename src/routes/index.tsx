@@ -2,12 +2,12 @@ import WeatherTextConditions from "@/components/WeatherText/WeatherTextCondition
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { MapPin } from "lucide-react";
-import { useWeather } from "../lib/WeatherProvider";
+import { useLocation } from "@/lib/provider/LocationProvider";
 
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
-  const { location } = useWeather();
+  const { location } = useLocation();
 
   return (
     <motion.div className="min-h-screen flex flex-col items-center justify-center text-center p-4">

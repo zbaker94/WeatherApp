@@ -5,8 +5,9 @@ import { Button } from "../ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import AdditionalTemperatureDetails from "./AdditionalTemperatureDetails";
 import { convertTemperatureToUnits, TemperatureUnits } from "./util";
-import { useWeather } from "../../lib/WeatherProvider";
+import { useWeather } from "../../lib/provider/WeatherProvider";
 import { z } from "zod";
+import { useLocation } from "@/lib/provider/LocationProvider";
 
 
 
@@ -29,7 +30,8 @@ const itemVariants = {
 const TemperatureText = () => {
     const [units, setUnits] = useState<TemperatureUnits>(TemperatureUnits.FAHRENHEIT);
     const [open, setOpen] = useState(false);
-    const { weather, isLoading, error, isError } = useWeather();
+    const { weather, weatherQueryIsLoading, weatherQueryIsError } = useWeather();
+    const {locationQueryIsError, locationQueryIsLoading} = useLocation();
     
     const handleUnitChange = useCallback((unit: TemperatureUnits) => {
         setUnits(unit);
@@ -37,55 +39,67 @@ const TemperatureText = () => {
     }, []);
 
     const temperatureToDisplay = useMemo(() => {
-        const temperatureKelvin = weather?.main?.temp;
+        const temperatureKelvin = weather?.current.temperature;
         const parsed = z.number().safeParse(temperatureKelvin);
         if (!parsed.success) {
-            return 'N/A';
+            return '?';
         }
         return convertTemperatureToUnits(parsed.data, units);
-    }, [units, weather?.main?.temp, convertTemperatureToUnits]);
+    }, [units, weather?.current.temperature, convertTemperatureToUnits]);
 
-    if (isError) {
-        return <div className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight">unable to load the weather: {String(error)}</div>;
-    }
-    if (isLoading) {
-        return <div className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight">loading the weather</div>;
-    }
-
-
+    const displayText = useMemo(() => {
+        switch (true) {
+            case locationQueryIsError:
+                return "unable to load the location";
+            case locationQueryIsLoading:
+                return "getting the location";
+            case weatherQueryIsError:
+                return "unable to load the weather";
+            case weatherQueryIsLoading:
+                return "loading the weather";
+            default:
+                return null;
+        }
+    }, [locationQueryIsError, locationQueryIsLoading, weatherQueryIsError, weatherQueryIsLoading]);
 
     return (
-        <div className="flex flex-col">
         <AnimatePresence mode="wait">
-            <motion.div key={units} className="text-5xl sm:text-7xl md:text-9xl font-bold leading-tight flex items-center justify-center gap-4" variants={containerVariants} initial="hidden" animate="show">
-                <AnimatePresence>
-                    <motion.span key={`temp-${units}`} variants={itemVariants}>{temperatureToDisplay}</motion.span>
-                </AnimatePresence>
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" className="text-4xl sm:text-5xl md:text-8xl font-bold leading-tight p-2 h-auto hover:bg-transparent flex items-center cursor-pointer">
+            {displayText ? (
+                <motion.div key={displayText} className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>{displayText}</motion.div>
+            ) : (
+                <motion.div key="main" className="flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <AnimatePresence mode="wait">
+                        <motion.div key={units} className="text-5xl sm:text-7xl md:text-9xl font-bold leading-tight flex items-center justify-center gap-4" variants={containerVariants} initial="hidden" animate="show">
                             <AnimatePresence>
-                                <motion.div key={`unit-${units}`} variants={itemVariants} className="flex items-center">
-                                    {units}
-                                    <ChevronDownIcon className={`ml-2 size-8 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-                                </motion.div>
+                                <motion.span key={`temp-${units}`} variants={itemVariants}>{temperatureToDisplay}</motion.span>
                             </AnimatePresence>
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-2">
-                        {Object.values(TemperatureUnits).map((u) => (
-                            u === units ? null : (
-                            <Button key={u} variant="ghost" onClick={() => handleUnitChange(u)} className="w-full justify-start cursor-pointer">
-                                {u}
-                            </Button>
-                            )
-                        ))}
-                    </PopoverContent>
-                </Popover>
-            </motion.div>
+                            <Popover open={open} onOpenChange={setOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" className="text-4xl sm:text-5xl md:text-8xl font-bold leading-tight p-2 h-auto hover:bg-transparent flex items-center cursor-pointer">
+                                        <AnimatePresence>
+                                            <motion.div key={`unit-${units}`} variants={itemVariants} className="flex items-center">
+                                                {units}
+                                                <ChevronDownIcon className={`ml-2 size-8 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                                            </motion.div>
+                                        </AnimatePresence>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-2">
+                                    {Object.values(TemperatureUnits).map((u) => (
+                                        u === units ? null : (
+                                        <Button key={u} variant="ghost" onClick={() => handleUnitChange(u)} className="w-full justify-start cursor-pointer">
+                                            {u}
+                                        </Button>
+                                        )
+                                    ))}
+                                </PopoverContent>
+                            </Popover>
+                        </motion.div>
+                    </AnimatePresence>
+                    <AdditionalTemperatureDetails units={units} />
+                </motion.div>
+            )}
         </AnimatePresence>
-        <AdditionalTemperatureDetails units={units} />
-        </div>
     );
 }
 
