@@ -6,6 +6,9 @@ export const GeoLocationSchema = z.object({
   lat: z.number(),
   lon: z.number(),
   name: z.string(),
+  country: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
 });
 
 export type GeoLocation = z.infer<typeof GeoLocationSchema>;
@@ -30,7 +33,7 @@ export const WeatherDataSchema = z.object({
 export type WeatherData = z.infer<typeof WeatherDataSchema>;
 
 export interface IWeatherAPI {
-  getGeoLocation(query: string): Promise<GeoLocation>;
-  getGeoLocationFromCoords(lat: number, lon: number): Promise<GeoLocation>;
+  getGeoLocation(query: string): Promise<GeoLocation[]>;
+  getGeoLocationFromCoords(lat: number, lon: number): Promise<GeoLocation[]>;
   getWeather(lat: number, lon: number): Promise<WeatherData>;
 }

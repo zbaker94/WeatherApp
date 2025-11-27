@@ -18,6 +18,8 @@ const RawOpenWeatherGeoLocationSchema = z.object({
   lon: z.number(),
 });
 
+const RawOpenWeatherGeoLocationsSchema = z.array(RawOpenWeatherGeoLocationSchema);
+
 const RawOpenWeatherWeatherDataSchema = z.object({
   coord: z.object({
     lon: z.number(),
@@ -80,44 +82,44 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
     this.getAPIKey = getAPIKey;
   }
 
-  private transformGeoLocation(data: OpenWeatherGeoLocation) {
-    return GeoLocationSchema.parse({
-      lat: data.lat,
-      lon: data.lon,
-      name: data.name,
-    });
+  private transformGeoLocation(data: OpenWeatherGeoLocation[]): GeoLocation[] {
+    return data.map(item => GeoLocationSchema.parse({
+      lat: item.lat,
+      lon: item.lon,
+      name: item.name,
+    }));
   }
 
-  private transformWeatherData(data: OpenWeatherWeatherData) {
-    return WeatherDataSchema.parse({
+  private transformWeatherData(data: OpenWeatherWeatherData[]): WeatherData[] {
+    return data.map(item => WeatherDataSchema.parse({
       current: {
-        temperature: data.main.temp,
-        feels_like: data.main.feels_like,
-        humidity: data.main.humidity,
+        temperature: item.main.temp,
+        feels_like: item.main.feels_like,
+        humidity: item.main.humidity,
         condition: {
-          name: data.weather[0]?.main || "Unknown",
-          description: data.weather[0]?.description || "No description",
+          name: item.weather[0]?.main || "Unknown",
+          description: item.weather[0]?.description || "No description",
         },
       },
       forecast: {
-        low: data.main.temp_min,
-        high: data.main.temp_max,
+        low: item.main.temp_min,
+        high: item.main.temp_max,
       },
       location: {
-        lat: data.coord.lat,
-        lon: data.coord.lon,
-        name: data.name,
+        lat: item.coord.lat,
+        lon: item.coord.lon,
+        name: item.name,
       },
-    });
+    }));
   }
 
-  async getGeoLocation(query: string): Promise<GeoLocation> {
+  async getGeoLocation(query: string): Promise<GeoLocation[]> {
     try {
       const API_KEY = this.getAPIKey();
       const response = await axios.get(
         `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${API_KEY}`
       );
-      const parsedResponse = RawOpenWeatherGeoLocationSchema.parse(response.data[0]);
+      const parsedResponse = RawOpenWeatherGeoLocationsSchema.parse(response.data);
       return this.transformGeoLocation(parsedResponse);
     } catch (error) {
       console.debug("Error in getGeoLocation:", error);
@@ -125,13 +127,13 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
     }
   }
 
-  async getGeoLocationFromCoords(lat: number, lon: number): Promise<GeoLocation> {
+  async getGeoLocationFromCoords(lat: number, lon: number): Promise<GeoLocation[]> {
     try {
       const API_KEY = this.getAPIKey();
       const response = await axios.get(
         `http://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${API_KEY}`
       );
-      const parsedResponse = RawOpenWeatherGeoLocationSchema.parse(response.data[0]);
+      const parsedResponse = RawOpenWeatherGeoLocationsSchema.parse(response.data);
       return this.transformGeoLocation(parsedResponse);
     } catch (error) {
       console.debug("Error in getGeoLocationFromCoords:", error);
@@ -147,7 +149,7 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
       );
       // Note: This is a placeholder; you need to transform response.data to match OpenWeatherWeatherDataSchema
       const parsedResponse = RawOpenWeatherWeatherDataSchema.parse(response.data);
-      return this.transformWeatherData(parsedResponse);
+      return this.transformWeatherData([parsedResponse])[0];
     } catch (error) {
       console.debug("Error in getWeather:", error);
       throw new Error("Failed to get weather");

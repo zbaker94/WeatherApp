@@ -2,10 +2,10 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WeatherProvider } from "../lib/provider/WeatherProvider";
+import { WeatherQueryProvider } from "../lib/provider/WeatherProvider";
 
 import appCss from "../styles.css?url";
-import { LocationProvider } from "@/lib/provider/LocationProvider";
+import { LocationQueryProvider } from "@/lib/provider/LocationQueryProvider";
 
 const queryClient = new QueryClient();
 
@@ -42,9 +42,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <LocationProvider>
-            <WeatherProvider>{children}</WeatherProvider>
-          </LocationProvider>
+          <LocationQueryProvider>
+            <WeatherQueryProvider>{children}</WeatherQueryProvider>
+          </LocationQueryProvider>
         </QueryClientProvider>
         <TanStackDevtools
           config={{
