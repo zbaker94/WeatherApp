@@ -59,17 +59,19 @@ const TemperatureText = () => {
   ]);
 
   return (
-    <AnimatePresence mode="wait">
+    <>
       {displayText ? (
-        <motion.div
-          key={displayText}
-          className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          {displayText}
-        </motion.div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={displayText}
+            className="text-3xl sm:text-5xl md:text-7xl font-bold leading-tight"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {displayText}
+          </motion.div>
+        </AnimatePresence>
       ) : (
         <motion.div
           key="main"
@@ -85,18 +87,15 @@ const TemperatureText = () => {
               initial="hidden"
               animate="show"
             >
-              <AnimatePresence>
-                <motion.span key={`temp-${units}`} variants={itemVariants}>
-                  {temperatureToDisplay}
-                </motion.span>
-              </AnimatePresence>
+              <motion.span key={`temp-${units}`} variants={itemVariants}>
+                {temperatureToDisplay}
+              </motion.span>
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="text-4xl sm:text-5xl md:text-8xl font-bold leading-tight p-2 h-auto hover:bg-transparent flex items-center cursor-pointer"
-                  >
-                    <AnimatePresence>
+                    <Button
+                      variant="ghost"
+                      className="text-4xl sm:text-5xl md:text-8xl font-bold leading-tight p-2 h-auto hover:bg-transparent flex items-center cursor-pointer"
+                    >
                       <motion.div
                         key={`unit-${units}`}
                         variants={itemVariants}
@@ -107,8 +106,7 @@ const TemperatureText = () => {
                           className={`ml-2 size-8 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
                         />
                       </motion.div>
-                    </AnimatePresence>
-                  </Button>
+                    </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-2">
                   {Object.values(TemperatureUnits).map((u) =>
@@ -126,11 +124,11 @@ const TemperatureText = () => {
                 </PopoverContent>
               </Popover>
             </motion.div>
-            <AdditionalTemperatureDetails units={units} />
           </AnimatePresence>
+          <AdditionalTemperatureDetails units={units} />
         </motion.div>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 

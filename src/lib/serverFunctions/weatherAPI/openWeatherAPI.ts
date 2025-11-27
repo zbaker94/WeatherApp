@@ -87,6 +87,9 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
       lat: item.lat,
       lon: item.lon,
       name: item.name,
+      country: item.country,
+      state: item?.state,
+      
     }));
   }
 
@@ -116,11 +119,29 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
   async getGeoLocation(query: string): Promise<GeoLocation[]> {
     try {
       const API_KEY = this.getAPIKey();
-      const response = await axios.get(
-        `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${API_KEY}`
-      );
-      const parsedResponse = RawOpenWeatherGeoLocationsSchema.parse(response.data);
-      return this.transformGeoLocation(parsedResponse);
+      // Check if query matches zip code pattern: "zip,country"
+      // zip: all numbers, country: 2-letter code
+      const zipPattern = /^\s*(\d+),\s*([a-zA-Z]{2})\s*$/;
+      const match = query.match(zipPattern);
+      let response;
+      if (match) {
+        // Use zip endpoint
+        const zip = match[1];
+        const country = match[2];
+        response = await axios.get(
+          `http://api.openweathermap.org/geo/1.0/zip?zip=${zip},${country}&appid=${API_KEY}`
+        );
+        // The zip endpoint returns a single object, not an array
+        const parsedResponse = RawOpenWeatherGeoLocationSchema.parse(response.data);
+        return this.transformGeoLocation([parsedResponse]);
+      } else {
+        // Use default direct endpoint
+        response = await axios.get(
+          `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=4&appid=${API_KEY}`
+        );
+        const parsedResponse = RawOpenWeatherGeoLocationsSchema.parse(response.data);
+        return this.transformGeoLocation(parsedResponse);
+      }
     } catch (error) {
       console.debug("Error in getGeoLocation:", error);
       throw new Error("Failed to get location");
@@ -131,7 +152,7 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
     try {
       const API_KEY = this.getAPIKey();
       const response = await axios.get(
-        `http://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${API_KEY}`
+        `http://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=4&appid=${API_KEY}`
       );
       const parsedResponse = RawOpenWeatherGeoLocationsSchema.parse(response.data);
       return this.transformGeoLocation(parsedResponse);

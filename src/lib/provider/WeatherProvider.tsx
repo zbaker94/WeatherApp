@@ -14,20 +14,22 @@ const WeatherQueryContext = createContext<WeatherContextType | undefined>(undefi
 
 export const WeatherQueryProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient()
-  const { locationQuery } = useLocationQuery()
+  const { geoLocationQuery } = useLocationQuery()
 
   const getWeatherFn = useServerFn(WeatherAPI.getWeather)
 
   const weatherQuery = useQuery<WeatherData, Error>({
-    queryKey: ['weather', locationQuery?.data?.[0]?.lat, locationQuery?.data?.[0]?.lon],
+    queryKey: ['weather', geoLocationQuery?.data?.[0]?.lat, geoLocationQuery?.data?.[0]?.lon],
     queryFn: () => {
-      if (!locationQuery?.data?.[0]) {
+      if (!geoLocationQuery?.data?.[0]) {
         throw new Error('Location not available')
       }
-      const { lat, lon } = locationQuery.data[0]
+      const { lat, lon } = geoLocationQuery.data[0]
       return getWeatherFn({ data: { lat, lon } })
     },
-    enabled: !!locationQuery?.isSuccess,
+    refetchInterval: 60000, // Refetch every 60 seconds
+    refetchIntervalInBackground: true,
+    enabled: !!geoLocationQuery?.isSuccess,
   })
 
   const refetchWeather = () => {
