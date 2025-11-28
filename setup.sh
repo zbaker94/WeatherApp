@@ -55,23 +55,28 @@ AllowedIPs = 10.0.0.0/24, 10.8.0.0/24
 EOF"
 
 # --- Docker build & run ---
-echo "🐳 Building Docker image for weatherapp..."
+echo "🏌️☁️ Starting weatherapp stack..."
 cd /vagrant
-
-# Enable Docker BuildKit
 export DOCKER_BUILDKIT=1
-# Load environment variables
-if [ -f /vagrant/.env ]; then
-  export $(grep -v '^#' /vagrant/.env | xargs)
-fi
+sudo docker compose up -d --build
 
-sudo docker build -t weatherapp .
+echo "✅ Weatherapp is running inside Docker Compose, accessible via HTTPS at https://weatherapp.local"
 
-echo "🏃 Starting weatherapp container..."
-sudo docker run -d \
-  --name weatherapp \
-  -p 10.8.0.1:${PORT}:${PORT} \
-  --env-file /vagrant/.env \
-  weatherapp
+echo "📜 Waiting for Caddy to generate certificates..."
+for i in {1..10}; do
+  if sudo docker exec vagrant-caddy-1 test -f /data/caddy/pki/authorities/local/root.crt; then
+    sudo docker exec vagrant-caddy-1 cat /data/caddy/pki/authorities/local/root.crt > /vagrant/root.crt
+    sudo docker exec vagrant-caddy-1 cat /data/caddy/pki/authorities/local/intermediate.crt > /vagrant/intermediate.crt
+    cat /vagrant/root.crt /vagrant/intermediate.crt > /vagrant/caddy-ca-chain.crt
+    echo "✅ Exported Caddy root+intermediate chain to /vagrant/caddy-ca-chain.crt"
+    break
+  else
+    echo "⏳ Still waiting ($i)..."
+    sleep 3
+  fi
+done
 
-echo "✅ Weatherapp is running inside Docker, bound to VPN IP 10.8.0.1:${PORT}"
+# Install root CA on VM itself (for curl/wget inside VM)
+sudo cp /vagrant/root.crt /usr/local/share/ca-certificates/caddy-root.crt
+sudo update-ca-certificates
+echo "✅ Root CA installed on VM"

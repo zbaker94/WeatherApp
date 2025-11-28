@@ -14,3 +14,4 @@ todos.json
 .vagrant
 
 client.conf
+*.crt
