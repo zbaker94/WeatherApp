@@ -103,4 +103,9 @@ You may also access the vm directly by running `vagrant ssh`
 - **General typing considerations:**: Review TypeScript types across the codebase and decide where `| undefined` or `| null` are appropriate; prefer explicit optional fields in schemas and avoid `any` while doing so. Document decisions for nullable/optional fields to improve readability and reduce runtime surprises.
 - **Centralize the axios client:**: Create a shared HTTP client with sensible defaults (baseURL, timeout, retry/backoff) used by all OpenWeather calls. Possibly including in the weather api interface. This makes changes (retry behavior, logging, timeouts) trivial and keeps request code DRY.
 
+- Split `setup.sh` functionality into discrete functions or scripts to improve readability, testability, and maintainability
+- Support windows for deploy logic
+- Move deploy dcripts and other artifact to a subdirectoryto avoid polluting the root directory
+- swap local VM-based example deploy to cloud-based deploy with private network etc.
+
 Any consolidation or architecture improvements should be weighed against the additional effort and cognitive load. Focus should be paid to functionality first and then DRYing the code as needed.
