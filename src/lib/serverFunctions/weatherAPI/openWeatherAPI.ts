@@ -129,7 +129,7 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
         const zip = match[1];
         const country = match[2];
         response = await axios.get(
-          `http://api.openweathermap.org/geo/1.0/zip?zip=${zip},${country}&appid=${API_KEY}`
+          `https://api.openweathermap.org/geo/1.0/zip?zip=${zip},${country}&appid=${API_KEY}`
         );
         // The zip endpoint returns a single object, not an array
         const parsedResponse = RawOpenWeatherGeoLocationSchema.parse(response.data);
@@ -137,7 +137,7 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
       } else {
         // Use default direct endpoint
         response = await axios.get(
-          `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=4&appid=${API_KEY}`
+          `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=4&appid=${API_KEY}`
         );
         const parsedResponse = RawOpenWeatherGeoLocationsSchema.parse(response.data);
         return this.transformGeoLocation(parsedResponse);
@@ -152,13 +152,13 @@ export class OpenWeatherAPIImpl implements IWeatherAPI {
     try {
       const API_KEY = this.getAPIKey();
       const response = await axios.get(
-        `http://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=4&appid=${API_KEY}`
+        `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=4&appid=${API_KEY}`
       );
       const parsedResponse = RawOpenWeatherGeoLocationsSchema.parse(response.data);
       return this.transformGeoLocation(parsedResponse);
     } catch (error) {
       console.debug("Error in getGeoLocationFromCoords:", error);
-      throw new Error("Failed to get location from coordinates");
+      throw new Error("Failed to get location from coordinates: " + error);
     }
   }
 
