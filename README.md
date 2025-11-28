@@ -10,6 +10,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 - Installed tools:
   - [Vagrant](https://www.vagrantup.com/)
   - [VirtualBox](https://www.virtualbox.org/)
+  - [wireguard and wg-quick](https://www.wireguard.com/)
   - `bash` shell running on Linux (untested) or MacOS
       - Windows may work but many of the automated processes in `deploy.sh` will not work on windows
   - `wg-quick` (WireGuard client utility)
@@ -21,7 +22,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 1. **Clone the repository**  
 
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/zbaker94/WeatherApp
    cd weatherapp
 
 2. Run `chmod +x ./deploy.sh` and `chmod +x ./teardown.sh`
@@ -35,7 +36,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
   # Then open `.env` and replace <YOUR OPEN WEATHER API KEY> with your actual key
   ```
 
-4. Run the `deploy.sh` script This will:
+4. Run `sudo deploy.sh`. This will:
 
 - Start the Vagrant VM
 
@@ -54,6 +55,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 4. Verify VPN connection with `sudo wg show`
 
 - You can disconnect from the VPN to see that the app is inaccessible by running `sudo wg-quick down ./client.conf`
+- You can destroy the deployment with `sudo teardown.sh`
 
 ## 🌐 Accessing the Application
 
@@ -107,5 +109,7 @@ You may also access the vm directly by running `vagrant ssh`
 - Support windows for deploy logic
 - Move deploy dcripts and other artifact to a subdirectoryto avoid polluting the root directory
 - swap local VM-based example deploy to cloud-based deploy with private network etc.
+- More robust checking for prerequisites in `deploy.sh`
+- Parameterize ip and ports used in deploy to allow more configurability
 
 Any consolidation or architecture improvements should be weighed against the additional effort and cognitive load. Focus should be paid to functionality first and then DRYing the code as needed.
