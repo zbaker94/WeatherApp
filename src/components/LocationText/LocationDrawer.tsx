@@ -51,7 +51,6 @@ const LocationDrawer = ({}) => {
         queryString += `,${country}`;
       }
     }
-    console.log({queryString})
     return queryString;
   };
 
