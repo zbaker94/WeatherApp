@@ -60,10 +60,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 ## 🌐 Accessing the Application
 
 - Once deployed, you can access the app at `https://weatherapp.local`
-- The connection is secure because:
-  - Traffic goes through the WireGuard VPN tunnel.
-  - Caddy provides HTTPS with its internal certificate authority.
-  - The root certificate is installed on your host so the browser trusts it.
+(A secure https connection is needed because we use the JavaScript geolocation API which requires a secure host.)
 
 ## 📍 Running locally
 
