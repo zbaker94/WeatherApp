@@ -107,7 +107,7 @@ You may also access the vm directly by running `vagrant ssh`
 
 - Split `setup.sh` functionality into discrete functions or scripts to improve readability, testability, and maintainability
 - Support windows for deploy logic
-- Move deploy dcripts and other artifact to a subdirectoryto avoid polluting the root directory
+- Move deploy scripts and other artifact to a subdirectoryto avoid polluting the root directory
 - swap local VM-based example deploy to cloud-based deploy with private network etc.
 - More robust checking for prerequisites in `deploy.sh`
 - Parameterize ip and ports used in deploy to allow more configurability
