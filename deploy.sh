@@ -1,24 +1,151 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
+HOST_CPU="$(uname -m)"
 OS="$(uname -s)"
 
-chmod +x ./setup.sh
-vagrant up --provision
-vagrant ssh -c "bash /vagrant/setup.sh"
+# Prefer qemu on ARM hosts
+if [[ "$HOST_CPU" =~ arm|aarch64 ]]; then
+  echo "ℹ️ Detected ARM host ($HOST_CPU). Using QEMU provider."
+  export VAGRANT_DEFAULT_PROVIDER="qemu"
+fi
 
-ROOT_CERT="./root.crt"
-
-if [ -f "$ROOT_CERT" ]; then
-  echo "📜 Found Caddy root certificate at $ROOT_CERT"
+# Ensure rsync exists on host
+if ! command -v rsync >/dev/null 2>&1; then
+  echo "📦 Installing rsync on host..."
   case "$OS" in
     Linux)
-      echo "🐧 Installing root certificate on Linux host..."
-      sudo cp "$ROOT_CERT" /usr/local/share/ca-certificates/caddy-root.crt
-      sudo update-ca-certificates
+      sudo apt-get update
+      sudo apt-get install -y rsync || true
       ;;
     Darwin)
-      echo "🍎 Installing root certificate on macOS host..."
+      if command -v brew >/dev/null 2>&1; then
+        brew install rsync
+      else
+        echo "⚠️ Homebrew not found. Please install rsync manually and re-run."
+      fi
+      ;;
+    *)
+      echo "⚠️ Unsupported host OS: $OS. Please ensure rsync is installed."
+      ;;
+  esac
+fi
+
+chmod +x ./setup.sh
+echo "🔼 Bringing up VM and provisioning..."
+vagrant up --provision
+
+echo "🔐 Running setup inside VM..."
+vagrant ssh -c "bash /vagrant/setup.sh"
+
+echo "🔁 Running initial sync to pull exported files from VM..."
+for attempt in 1 2 3; do
+  if ./sync.sh; then
+    echo "✅ sync.sh succeeded"
+    break
+  else
+    echo "⚠️ sync.sh failed (attempt $attempt); retrying in 5s..."
+    sleep 5
+  fi
+  if [[ $attempt -eq 3 ]]; then
+    echo "❌ sync.sh failed after 3 attempts; aborting deploy."
+    exit 1
+  fi
+done
+
+# --- Discover VM IP (first global IPv4) ---
+echo "🔎 Detecting VM IP..."
+VM_IP=$(vagrant ssh -c "ip -4 -o addr show scope global | awk '{print \$4}' | cut -d/ -f1 | head -n1" | tr -d '\r' || true)
+VM_IP=$(echo "$VM_IP" | sed -n '1p')
+
+if [ -z "${VM_IP:-}" ]; then
+  echo "❌ Could not determine VM IP. Aborting."
+  exit 1
+fi
+echo "ℹ️ VM IP detected: $VM_IP"
+
+# --- Host-side UDP relay setup (host) ---
+echo "🔁 Setting up host UDP relay for WireGuard (host:51820 -> ${VM_IP}:51820)..."
+
+case "$OS" in
+  Linux)
+    if ! command -v socat >/dev/null 2>&1; then
+      echo "📦 Installing socat..."
+      sudo apt-get update
+      sudo apt-get install -y socat
+    fi
+
+    RELAY_UNIT="/etc/systemd/system/wg-udp-relay.service"
+    sudo tee "$RELAY_UNIT" > /dev/null <<EOF
+[Unit]
+Description=WireGuard UDP relay (host -> VM)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat UDP4-LISTEN:51820,reuseaddr,fork UDP4:${VM_IP}:51820
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo "🔧 Enabling and starting wg-udp-relay.service..."
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now wg-udp-relay.service
+    sudo systemctl status wg-udp-relay.service --no-pager || true
+    ;;
+
+  Darwin)
+    if ! command -v socat >/dev/null 2>&1; then
+      echo "📦 Installing socat via brew..."
+      if command -v brew >/dev/null 2>&1; then
+        brew install socat
+      else
+        echo "⚠️ Homebrew not found. Please install Homebrew or socat manually and re-run deploy.sh."
+        echo "You can also run: sudo socat UDP4-LISTEN:51820,reuseaddr,fork UDP4:${VM_IP}:51820"
+      fi
+    fi
+
+    echo "🚀 Starting socat relay on macOS (background)..."
+    nohup socat UDP4-LISTEN:51820,reuseaddr,fork UDP4:${VM_IP}:51820 >/tmp/wg-relay.log 2>&1 &
+    echo "ℹ️ socat started, logs: /tmp/wg-relay.log"
+    ;;
+
+  *)
+    echo "⚠️ Unsupported host OS: $OS. Please run a UDP relay manually:"
+    echo "   socat UDP4-LISTEN:51820,reuseaddr,fork UDP4:${VM_IP}:51820"
+    ;;
+esac
+
+# --- Wait for Caddy root certificate exported by the VM ---
+ROOT_CERT="./root.crt"
+echo "📜 Waiting for Caddy root certificate at $ROOT_CERT..."
+for i in {1..40}; do
+  if [ -f "$ROOT_CERT" ]; then
+    echo "✅ Found $ROOT_CERT"
+    break
+  else
+    echo "⏳ Still waiting for root.crt ($i/40)..."
+    sleep 3
+  fi
+done
+
+if [ ! -f "$ROOT_CERT" ]; then
+  echo "❌ root.crt not found after waiting. Exiting early."
+  exit 1
+fi
+
+# --- Install root cert on host ---
+if [ -f "$ROOT_CERT" ]; then
+  echo "📜 Installing root certificate on host..."
+  case "$OS" in
+    Linux)
+      sudo cp "$ROOT_CERT" /usr/local/share/ca-certificates/caddy-root.crt
+      sudo update-ca-certificates || true
+      ;;
+    Darwin)
       sudo security add-trusted-cert -d -r trustRoot \
         -k /Library/Keychains/System.keychain "$ROOT_CERT"
       ;;
@@ -36,21 +163,25 @@ if grep -q "weatherapp.local" /etc/hosts; then
   echo "ℹ️ /etc/hosts already contains weatherapp.local"
 else
   echo "📝 Adding weatherapp.local to /etc/hosts..."
-  # macOS and Linux both use /etc/hosts
   echo "$HOST_ENTRY" | sudo tee -a /etc/hosts > /dev/null
 fi
 
-echo "✅ WireGuard VPN setup complete."
-echo "➡️ Client config available at ./client.conf"
+echo "✅ Host relay and cert install complete."
 
-CONF="$(realpath ./client.conf)"
-if ! sudo wg show wg0 &>/dev/null; then
-  echo "Running wg-quick up $CONF"
-  sudo wg-quick up "$CONF"
+# --- Bring up WireGuard client on host (uses client.conf generated by VM at /vagrant/client.conf) ---
+CONF="$(realpath ./client.conf 2>/dev/null || true)"
+if [ -z "${CONF:-}" ] || [ ! -f "$CONF" ]; then
+  echo "❌ client.conf not found at ./client.conf. Ensure setup.sh created /vagrant/client.conf and rsync synced it back to host."
 else
-  echo "WireGuard already up."
+  if ! sudo wg show wg0 &>/dev/null; then
+    echo "🔐 Bringing up WireGuard client using $CONF"
+    sudo wg-quick up "$CONF"
+  else
+    echo "ℹ️ WireGuard already up."
+  fi
 fi
 
+# --- Open the app URL ---
 URL="https://weatherapp.local"
 echo "Opening app at $URL ..."
 case "$OS" in
@@ -68,4 +199,5 @@ case "$OS" in
     echo "⚠️ Unsupported OS: $OS. Open $URL manually."
     ;;
 esac
+
 echo "✅ Deploy complete!"

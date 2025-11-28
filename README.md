@@ -38,7 +38,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
   # Then open `.env` and replace <YOUR OPEN WEATHER API KEY> with your actual key
   ```
 
-4. Run `sudo deploy.sh`. This will:
+4. Run (sudo) `deploy.sh`. This will:
 
 - Start the Vagrant VM
 
@@ -57,12 +57,14 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 4. Verify VPN connection with `sudo wg show`
 
 - You can disconnect from the VPN to see that the app is inaccessible by running `sudo wg-quick down ./client.conf`
-- You can destroy the deployment with `sudo teardown.sh`
+- You can destroy the deployment with (sudo) `teardown.sh`
 
 ## 🌐 Accessing the Application
 
 - Once deployed, you can access the app at `https://weatherapp.local`
 (A secure https connection is needed because we use the JavaScript geolocation API which requires a secure host.)
+
+🚨 Note: There is a potential bug with `wg-quick down` on MacOS that may result in the VPN DNS server persisting. If you experience connectivity issues after running `teardown.sh` or `wg-quick down`, check you wifi configuration and remove the DNS address `10.8.0.1` if present.
 
 ## 📍 Running locally
 
