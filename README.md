@@ -10,9 +10,9 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 - Installed tools:
   - [Vagrant](https://www.vagrantup.com/)
   - [VirtualBox](https://www.virtualbox.org/)
-  - [wireguard and wg-quick](https://www.wireguard.com/)
+  - [wireguard-tools (the wg-quick command)](https://www.wireguard.com/)
   - `bash` shell running on Linux (untested) or MacOS
-      - Windows may work but many of the automated processes in `deploy.sh` will not work on windows
+      - Windows may work, but many of the automated processes in `deploy.sh` will not work on Windows
   - `wg-quick` (WireGuard client utility)
 
 ---
@@ -64,7 +64,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 
 ## 📍 Running locally
 
-To run the app alone locally, you will need node and npm installed and then simply run the following:
+To run the app alone locally, you will need Node and npm installed, and then simply run the following:
 ```bash
 cp .env.example .env
 # add your API key to `.env` then:
@@ -72,7 +72,7 @@ npm install
 npm run dev
 ```
 
-You may also access the vm directly by running `vagrant ssh`
+You may also access the VM directly by running `vagrant ssh`
 
 ## 🧩 How It Works
 **App Overview**
@@ -82,7 +82,7 @@ You may also access the vm directly by running `vagrant ssh`
 - **API:**: Uses the OpenWeather API (`https://openweathermap.org/api`). Stores the API key in a `.env` file that is not sent to the client.
 - **Architecture:**: Built with React + Vite + TypeScript using TanStack Start. The UI is broken into focused components (see `src/components/LocationText/`) and API calls are routed through modular server functions (`src/lib/serverFunctions/weatherAPI/`) with a provider pattern implemented for the weather API functionality.
 - Tanstack Query is used for client-side data management.
-- Zod schemas are utilized with the server functions to guarantee end to end type safety
+- Zod schemas are utilized with the server functions to guarantee end-to-end type safety
 
 #### Open `network.md` with a mermaid diagram viewer to see a visual representation
 
@@ -104,9 +104,9 @@ You may also access the vm directly by running `vagrant ssh`
 
 - Split `setup.sh` functionality into discrete functions or scripts to improve readability, testability, and maintainability
 - Support windows for deploy logic
-- Move deploy scripts and other artifact to a subdirectoryto avoid polluting the root directory
-- swap local VM-based example deploy to cloud-based deploy with private network etc.
+- Move deploy scripts and other artifacts to a subdirectory to avoid polluting the root directory
+- swap local VM-based example deploy to cloud-based deploy with private network, etc.
 - More robust checking for prerequisites in `deploy.sh`
-- Parameterize ip and ports used in deploy to allow more configurability
+- Parameterize IP and ports used in deployment to allow more configurability
 
 Any consolidation or architecture improvements should be weighed against the additional effort and cognitive load. Focus should be paid to functionality first and then DRYing the code as needed.
