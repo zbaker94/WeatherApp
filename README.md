@@ -1,4 +1,4 @@
-# Weatherapp Deployment
+# Weatherapp
 
 This project runs a **Node.js weather application** inside a **Docker Compose stack** on a **Vagrant VM**, fronted by **Caddy** for HTTPS, and accessed securely through a **WireGuard VPN**.
 
