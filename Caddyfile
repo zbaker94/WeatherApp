@@ -1,0 +1,4 @@
+https://weatherapp.local {
+    tls internal
+    reverse_proxy weatherapp:3000
+}
