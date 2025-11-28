@@ -62,6 +62,8 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 - Once deployed, you can access the app at `https://weatherapp.local`
 (A secure https connection is needed because we use the JavaScript geolocation API which requires a secure host.)
 
+🚨 Note: There is a potential bug with `wg-quick down` on MacOS that may result in the VPN DNS server persisting. If you experience connectivity issues after running `teardown.sh` or `wg-quick down`, check you wifi configuration and remove the DNS address `10.8.0.1` if present.
+
 ## 📍 Running locally
 
 To run the app alone locally, you will need Node and npm installed, and then simply run the following:
