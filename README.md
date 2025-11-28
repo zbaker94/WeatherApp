@@ -1,290 +1,106 @@
-Welcome to your new TanStack app! 
+# Weatherapp Deployment
 
-# Getting Started
+This project runs a **Node.js weather application** inside a **Docker Compose stack** on a **Vagrant VM**, fronted by **Caddy** for HTTPS, and accessed securely through a **WireGuard VPN**.
 
-To run this application:
+---
 
+## 📦 Prerequisites
+
+- **Host machine** (Linux or macOS recommended)
+- Installed tools:
+  - [Vagrant](https://www.vagrantup.com/)
+  - [VirtualBox](https://www.virtualbox.org/)
+  - `bash` shell running on Linux (untested) or MacOS
+      - Windows may work but many of the automated processes in `deploy.sh` will not work on windows
+  - `wg-quick` (WireGuard client utility)
+
+---
+
+## 🚀 Setup & Deployment
+
+1. **Clone the repository**  
+
+   ```bash
+   git clone <your-repo-url>
+   cd weatherapp
+
+2. Run `chmod +x ./deploy.sh` and `chmod +x ./teardown.sh`
+
+3. Create a `.env` file with your OpenWeather API key
+
+  - Copy the example and edit it to include your API key:
+
+  ```bash
+  cp .env.example .env
+  # Then open `.env` and replace <YOUR OPEN WEATHER API KEY> with your actual key
+  ```
+
+4. Run the `deploy.sh` script This will:
+
+- Start the Vagrant VM
+
+- Provision Docker, WireGuard, and iptables
+
+- Build and run the Docker Compose stack
+
+- Export and install the Caddy root certificate
+
+- Add weatherapp.local to your /etc/hosts
+
+- Start the WireGuard client tunnel
+
+- Open the app in your browser
+
+4. Verify VPN connection with `sudo wg show`
+
+- You can disconnect from the VPN to see that the app is inaccessible by running `sudo wg-quick down ./client.conf`
+
+## 🌐 Accessing the Application
+
+- Once deployed, you can access the app at `https://weatherapp.local`
+- The connection is secure because:
+  - Traffic goes through the WireGuard VPN tunnel.
+  - Caddy provides HTTPS with its internal certificate authority.
+  - The root certificate is installed on your host so the browser trusts it.
+
+## 📍 Running locally
+
+To run the app alone locally, you will need node and npm installed and then simply run the following:
 ```bash
+cp .env.example .env
+# add your API key to `.env` then:
 npm install
-npm run start
+npm run dev
 ```
 
-# Building For Production
-
-To build this application for production:
-
-```bash
-npm run build
-```
-
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
-
-```bash
-npm run test
-```
-
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-
-
-
-## Routing
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import { Link } from "@tanstack/react-router";
-
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
-
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-const peopleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/people",
-  loader: async () => {
-    const response = await fetch("https://swapi.dev/api/people");
-    return response.json() as Promise<{
-      results: {
-        name: string;
-      }[];
-    }>;
-  },
-  component: () => {
-    const data = peopleRoute.useLoaderData();
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    );
-  },
-});
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-### React-Query
-
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
-
-First add your dependencies:
-
-```bash
-npm install @tanstack/react-query @tanstack/react-query-devtools
-```
-
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
-
-```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-// ...
-
-const queryClient = new QueryClient();
-
-// ...
-
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-}
-```
-
-You can also add TanStack Query Devtools to the root route (optional).
-
-```tsx
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools />
-    </>
-  ),
-});
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-
-import "./App.css";
-
-function App() {
-  const { data } = useQuery({
-    queryKey: ["people"],
-    queryFn: () =>
-      fetch("https://swapi.dev/api/people")
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
-  });
-
-  return (
-    <div>
-      <ul>
-        {data.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default App;
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
-
-```bash
-npm install @tanstack/store
-```
-
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
-
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store } from "@tanstack/store";
-import "./App.css";
-
-const countStore = new Store(0);
-
-function App() {
-  const count = useStore(countStore);
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-    </div>
-  );
-}
-
-export default App;
-```
-
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
-
-Let's check this out by doubling the count using derived state.
-
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store, Derived } from "@tanstack/store";
-import "./App.css";
-
-const countStore = new Store(0);
-
-const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
-  deps: [countStore],
-});
-doubledStore.mount();
-
-function App() {
-  const count = useStore(countStore);
-  const doubledCount = useStore(doubledStore);
-
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-      <div>Doubled - {doubledCount}</div>
-    </div>
-  );
-}
-
-export default App;
-```
-
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
-
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
-
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+You may also access the vm directly by running `vagrant ssh`
+
+## 🧩 How It Works
+**App Overview**
+
+- **Purpose:**: A small, maintainable weather app that fetches current conditions and basic details for a requested location.
+- **Search Options:**: Users can search by **city name**, **ZIP/postal code**, or **coordinates** via the browser geolocation API.
+- **API:**: Uses the OpenWeather API (`https://openweathermap.org/api`). Stores the API key in a `.env` file that is not sent to the client.
+- **Architecture:**: Built with React + Vite + TypeScript using TanStack Start. The UI is broken into focused components (see `src/components/LocationText/`) and API calls are routed through modular server functions (`src/lib/serverFunctions/weatherAPI/`) with a provider pattern implemented for the weather API functionality.
+- Tanstack Query is used for client-side data management.
+- Zod schemas are utilized with the server functions to guarantee end to end type safety
+
+#### Open `network.md` with a mermaid diagram viewer to see a visual representation
+
+- Browser → asks for weatherapp.local
+- /etc/hosts → maps weatherapp.local → 10.8.0.1 (VM’s VPN IP)
+- WireGuard client → sends traffic securely to VM
+- WireGuard server (VM) → receives traffic
+- Caddy container → handles HTTPS and forwards requests
+- Weatherapp container → Node.js app responds on port 3000
+
+## **Potential Improvements**
+
+- **Automated testing:**: Add comprehensive unit and integration tests (using Vitest and React Testing Library) for components, provider logic, and server-side transforms so regressions are caught early.
+- **Validation of weather response schemas:**: Harden Zod schemas for OpenWeather responses — make non-essential fields optional or allow alternate types where the API can vary (e.g., missing `sea_level`, `grnd_level`, or optional `rain`/`gust` fields) and add tests to assert transform behavior against sample API payloads.
+- **Cleaner construction of query strings:**: Centralize and simplify the logic that composes location queries (city, state, country, ZIP) into a small, well-tested utility to avoid edge cases and ensure consistent API requests.
+- **Optimization of query keys:**: Normalize `react-query` keys (e.g., `['weather', lat, lon]`) to deterministic, explicit values so caching and invalidation behave predictably and avoid using `undefined` in keys.
+- **General typing considerations:**: Review TypeScript types across the codebase and decide where `| undefined` or `| null` are appropriate; prefer explicit optional fields in schemas and avoid `any` while doing so. Document decisions for nullable/optional fields to improve readability and reduce runtime surprises.
+- **Centralize the axios client:**: Create a shared HTTP client with sensible defaults (baseURL, timeout, retry/backoff) used by all OpenWeather calls. Possibly including in the weather api interface. This makes changes (retry behavior, logging, timeouts) trivial and keeps request code DRY.
+
+Any consolidation or architecture improvements should be weighed against the additional effort and cognitive load. Focus should be paid to functionality first and then DRYing the code as needed.
