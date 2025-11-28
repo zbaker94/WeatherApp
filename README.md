@@ -14,6 +14,8 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
   - `bash` shell running on Linux (untested) or MacOS
       - Windows may work, but many of the automated processes in `deploy.sh` will not work on Windows
   - `wg-quick` (WireGuard client utility)
+  - [brew (MacOS)](https://brew.sh/)
+  - sudo access on the host machine
 
 ---
 
