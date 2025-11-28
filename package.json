@@ -7,6 +7,7 @@
     "build": "vite build",
     "serve": "vite preview",
     "test": "vitest run"
+      ,"start": "node .output/server/index.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
