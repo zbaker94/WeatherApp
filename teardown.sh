@@ -3,8 +3,7 @@ set -euo pipefail
 
 # teardown.sh
 # Safely remove artifacts created by deploy/setup:
-# - host UDP relay (systemd socat service or background socat)
-# - iptables DNAT/forward rules referencing port 51820
+# - iptables DNAT/forward rules referencing port 51820 (if any)
 # - WireGuard client interface
 # - /etc/hosts entry for weatherapp.local
 # - installed root CA (Linux and macOS)
@@ -17,7 +16,6 @@ set -euo pipefail
 OS="$(uname -s)"
 HOSTS_ENTRY_HOST="weatherapp.local"
 HOSTS_FILE="/etc/hosts"
-WG_RELAY_SERVICE="/etc/systemd/system/wg-udp-relay.service"
 
 log() { printf '%s\n' "$1"; }
 
@@ -86,82 +84,19 @@ remove_macos_cert() {
 bring_down_wireguard() {
   log "🔻 Tearing down WireGuard client if running..."
   if [[ -n "${CLIENT_CONF:-}" ]]; then
-    sudo wg-quick down "${CLIENT_CONF}" >/dev/null 2>&1 || true
+    echo "🔻 Bringing down WireGuard client using ${CLIENT_CONF}..."
+    sudo wg-quick down "${CLIENT_CONF}" || true
   fi
 
   for iface in client wg0; do
-    if sudo wg show "$iface" >/dev/null 2>&1; then
-      sudo wg-quick down "$iface" >/dev/null 2>&1 || true
+    if sudo wg show "$iface"; then
+      log "🔻 Bringing down WireGuard interface: $iface..."
+      sudo wg-quick down "$iface" || true
       log "✅ Brought down WireGuard interface: $iface."
     fi
   done
 
   log "ℹ️ WireGuard teardown complete (if it was running)."
-}
-
-stop_and_remove_relay() {
-  log "🔁 Cleaning up host UDP relay (socat/systemd/iptables) for port 51820..."
-
-  # 1) systemd service (Linux)
-  if [[ "$OS" == "Linux" ]]; then
-    if sudo systemctl list-unit-files | grep -q '^wg-udp-relay.service'; then
-      log "🔧 Stopping and disabling wg-udp-relay.service..."
-      sudo systemctl stop wg-udp-relay.service >/dev/null 2>&1 || true
-      sudo systemctl disable wg-udp-relay.service >/dev/null 2>&1 || true
-      if [[ -f "$WG_RELAY_SERVICE" ]]; then
-        sudo rm -f "$WG_RELAY_SERVICE"
-        sudo systemctl daemon-reload || true
-        log "✅ Removed systemd unit $WG_RELAY_SERVICE"
-      fi
-    else
-      log "ℹ️ wg-udp-relay.service not present."
-    fi
-  fi
-
-  # 2) background socat processes (macOS or Linux)
-  if command -v pgrep >/dev/null 2>&1; then
-    if pgrep -f "socat .*51820" >/dev/null 2>&1; then
-      log "🛑 Killing background socat processes bound to port 51820..."
-      pkill -f "socat .*51820" || true
-      sleep 1
-      log "✅ Killed socat processes (if any)."
-    else
-      log "ℹ️ No background socat processes for port 51820 found."
-    fi
-  fi
-
-  # 3) iptables DNAT / FORWARD rules on Linux hosts (remove any rules referencing port 51820)
-  if [[ "$OS" == "Linux" ]] && command -v iptables >/dev/null 2>&1; then
-    if sudo iptables -t nat -S | grep -q -- '--dport 51820'; then
-      log "🔧 Removing iptables NAT PREROUTING rules that reference port 51820..."
-      sudo iptables -t nat -S | while IFS= read -r line; do
-        if [[ "$line" == *"--dport 51820"* ]]; then
-          del_rule="${line/-A/-D}"
-          sudo iptables -t nat $del_rule || true
-        fi
-      done
-      log "✅ Removed NAT PREROUTING rules for port 51820 (if any)."
-    else
-      log "ℹ️ No NAT PREROUTING iptables rules for port 51820 found."
-    fi
-
-    if sudo iptables -S | grep -q -- '51820'; then
-      log "🔧 Removing iptables FORWARD rules that reference 51820..."
-      sudo iptables -S | while IFS= read -r line; do
-        if [[ "$line" == *"51820"* ]]; then
-          if [[ "$line" == -A* ]]; then
-            del_rule="${line/-A/-D}"
-            sudo iptables $del_rule || true
-          fi
-        fi
-      done
-      log "✅ Removed FORWARD rules referencing 51820 (if any)."
-    else
-      log "ℹ️ No FORWARD iptables rules referencing 51820 found."
-    fi
-  fi
-
-  log "🔚 Host relay cleanup complete."
 }
 
 cleanup_rsync_state() {
@@ -173,7 +108,7 @@ cleanup_rsync_state() {
       log "🛑 Killing background rsync processes..."
       pkill -f "rsync .*ssh" || true
       sleep 1
-      log "✅ Killed rsync processes (if any)."
+      log "✅ Killed rsync processes."
     else
       log "ℹ️ No background rsync processes found."
     fi
@@ -182,7 +117,6 @@ cleanup_rsync_state() {
   # Remove common rsync temporary files in repo root (safe, only removes known patterns)
   local patterns=( ".~tmp~" ".~tmp~*" "*.~tmp~" )
   for p in "${patterns[@]}"; do
-    # find and remove matching files
     find . -maxdepth 2 -type f -name "$p" -print0 2>/dev/null | xargs -0 -r rm -f || true
   done
 
@@ -199,8 +133,8 @@ cleanup_rsync_state() {
 destroy_vagrant() {
   if command -v vagrant >/dev/null 2>&1; then
     log "🧨 Destroying Vagrant VM (if present)..."
-    vagrant halt >/dev/null 2>&1 || true
-    vagrant destroy -f >/dev/null 2>&1 || log "ℹ️ Vagrant destroy skipped or failed gracefully."
+    vagrant halt || true
+    vagrant destroy -f || log "ℹ️ Vagrant destroy skipped or failed gracefully."
     log "✅ Vagrant VM destroyed (if it existed)."
   else
     log "ℹ️ vagrant not installed on this host; skipping VM destroy."
@@ -229,7 +163,6 @@ main() {
 
   remove_hosts_entry
   bring_down_wireguard
-  stop_and_remove_relay
   cleanup_rsync_state
   destroy_vagrant
   delete_files

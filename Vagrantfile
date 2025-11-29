@@ -3,7 +3,8 @@ Vagrant.configure("2") do |config|
   host_cpu = RbConfig::CONFIG['host_cpu']
 
   if host_cpu =~ /arm|aarch64/
-    config.vm.box = "perk/ubuntu-2204-arm64"
+    config.vm.box = "cloud-image/ubuntu-24.04"
+  config.vm.box_version = "20251113.0.0"
   else
     config.vm.box = "roboxes/ubuntu2204"
   end
@@ -16,11 +17,6 @@ Vagrant.configure("2") do |config|
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "2048"
     vb.cpus = 2
-  end
-
-  config.vm.provider "qemu" do |q|
-    q.memory = 2048
-    q.cpus = 2
   end
 
   config.vm.provision "shell", inline: <<-SHELL
