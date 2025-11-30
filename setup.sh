@@ -53,7 +53,7 @@ DNS = 10.8.0.1
 [Peer]
 PublicKey = $SERVER_PUBLIC_KEY
 Endpoint = 127.0.0.1:51820
-AllowedIPs = 10.0.0.0/24, 10.8.0.0/24
+AllowedIPs = 10.8.0.0/24
 EOF"
 
 # --- Docker build & run ---
