@@ -12,7 +12,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
   - [VirtualBox](https://www.virtualbox.org/)
   - [wireguard-tools (the wg-quick command)](https://www.wireguard.com/)
   - `bash` shell running on Linux (untested) or MacOS
-      - Windows may work, but many of the automated processes in `deploy.sh` will not work on Windows
+    - Windows may work, but many of the automated processes in `deploy.sh` will not work on Windows
   - `wg-quick` (WireGuard client utility)
   - [brew (MacOS)](https://brew.sh/)
   - sudo access on the host machine
@@ -31,7 +31,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 
 3. Create a `.env` file with your OpenWeather API key
 
-  - Copy the example and edit it to include your API key:
+- Copy the example and edit it to include your API key:
 
   ```bash
   cp .env.example .env
@@ -69,6 +69,7 @@ This project runs a **Node.js weather application** inside a **Docker Compose st
 ## 📍 Running locally
 
 To run the app alone locally, you will need Node and npm installed, and then simply run the following:
+
 ```bash
 cp .env.example .env
 # add your API key to `.env` then:
@@ -79,6 +80,7 @@ npm run dev
 You may also access the VM directly by running `vagrant ssh`
 
 ## 🧩 How It Works
+
 **App Overview**
 
 - **Purpose:**: A small, maintainable weather app that fetches current conditions and basic details for a requested location.
@@ -90,12 +92,32 @@ You may also access the VM directly by running `vagrant ssh`
 
 #### Open `network.md` with a mermaid diagram viewer to see a visual representation
 
-- Browser → asks for weatherapp.local
-- /etc/hosts → maps weatherapp.local → 10.8.0.1 (VM’s VPN IP)
-- WireGuard client → sends traffic securely to VM
-- WireGuard server (VM) → receives traffic
-- Caddy container → handles HTTPS and forwards requests
-- Weatherapp container → Node.js app responds on port 3000
+**Networking Overview**
+
+1. The VPN connects to the host loopback at port 51820
+
+    - Normally, this would be the server’s public IP
+    - The VM instead forwards host UDP port 51820 → VM UDP port 51820.
+
+2. **Browser on host** → Requests `https://weatherapp.local`.
+
+    - DNS resolution via `/etc/hosts` → `10.8.0.1` (the ip of the server VPN interface).
+
+    - Routed through WireGuard tunnel (`wg0`) because `10.8.0.0/24` (The VPN subnet as defined in the server config) is in `AllowedIPs` in `client.conf`.
+
+3. **VM (WireGuard server)** → Receives traffic at `10.8.0.1` (as specified in the VM wireguard conf).
+
+    - Forwards to Docker network due to VM iptables allowing bidirectional forwarding between wg0 and the VMs default network interface. Since the request is https it is routed to port 443 on the VM where the Caddy container is listening.
+
+4. **Caddy container** → Listens on VM port `443`.
+
+    - Terminates TLS using internal CA cert.
+
+    - Proxies request to `weatherapp:3000`.
+
+5. **Weatherapp container** → Node.js app responds on port `3000`.
+
+6. **Response path** → Weatherapp → Caddy → VM → WireGuard tunnel → Host → Browser.
 
 ## **Potential Improvements**
 
