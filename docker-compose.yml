@@ -1,17 +1,25 @@
 services:
   weatherapp:
     build: .
-    env_file: .env
+    environment:
+      - PORT=3000
+    env_file: .env # optional; override/add variables as needed
     expose:
-      - "${PORT}"
+      - "3000"
     restart: unless-stopped
 
   caddy:
     image: caddy:latest
     volumes:
-      - /vagrant/Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
     ports:
       - "443:443"
     depends_on:
       - weatherapp
     restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
